@@ -14,12 +14,12 @@ const INFO = new TextEncoder().encode('shh-chat-v1');
 const PLAINTEXT_MAX = 2048; // 2 KB hard cap
 
 // ---- Byte / string helpers ------------------------------------------------
-function bytesToB64(bytes) {
+export function bytesToB64(bytes) {
   let bin = '';
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
   return btoa(bin);
 }
-function b64ToBytes(b64) {
+export function b64ToBytes(b64) {
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
@@ -42,6 +42,20 @@ export function randomId() {
   let s = '';
   for (let i = 0; i < 12; i++) s += BASE32[buf[i] & 31];
   return s;
+}
+
+// Anything typed, pasted or scanned is reduced to a candidate id: unambiguous
+// base32, 12..16 chars, otherwise null. A key, a URL or a fragment of text can
+// never be mistaken for an identity.
+export function parseId(text) {
+  const s = String(text || '').trim().toUpperCase().replace(/[^A-Z2-7]/g, '');
+  return s.length >= 12 && s.length <= 16 ? s : null;
+}
+
+// Strict form, used for anything read out of a QR code: the whole payload must be
+// an id, so a URL, a key or a message body can never be searched for by accident.
+export function isId(text) {
+  return /^[A-Z2-7]{12,16}$/.test(String(text || '').trim().toUpperCase());
 }
 
 // ---- Compact synchronous SHA-256 (used only to solve the PoW quickly) ------
@@ -238,4 +252,30 @@ export async function decryptMessage(key, b64) {
   const ct = raw.slice(12);
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
   return new TextDecoder().decode(plain);
+}
+
+// ---- Attachment encryption ------------------------------------------------
+// Same chat key, same AEAD, a fresh 96-bit nonce per chunk (never reused). Files
+// travel as 64 KB slices so one WebSocket frame stays small and progress is
+// visible. The server sees opaque base64 and cannot reassemble anything useful.
+export const CHUNK_PLAIN_MAX = 64 * 1024;
+export const FILE_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+export async function encryptChunk(key, bytes) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes));
+  return bytesToB64(concatBytes([iv, ct]));
+}
+
+export async function decryptChunk(key, b64) {
+  const raw = b64ToBytes(b64);
+  const iv = raw.slice(0, 12);
+  const ct = raw.slice(12);
+  return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct));
+}
+
+// Random, non-sequential transfer id (visible to the server as an opaque label).
+export function randomTransferId() {
+  return bytesToB64(crypto.getRandomValues(new Uint8Array(9)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }

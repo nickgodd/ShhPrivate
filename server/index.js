@@ -23,6 +23,9 @@ const MIME = {
 
 // Strict CSP: only same-origin assets, no external fonts/scripts/trackers.
 // connect-src allows same-origin + ws/wss (needed for the WebSocket relay).
+// img-src additionally allows data: and blob:, which is how a decrypted
+// attachment is shown in the chat: the bytes go from WebCrypto straight into an
+// in-memory object URL and never touch the network or the disk.
 const CSP = [
   "default-src 'self'",
   "base-uri 'none'",
@@ -31,7 +34,7 @@ const CSP = [
   "form-action 'none'",
   "script-src 'self'",
   "style-src 'self'",
-  "img-src 'self' data:",
+  "img-src 'self' data: blob:",
   "connect-src 'self' ws: wss:",
   "font-src 'none'",
   "worker-src 'none'",
@@ -76,7 +79,9 @@ const server = http.createServer((req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+  // Camera is used ONLY by the in-app QR scanner, on this origin, and only after
+  // an explicit click. Everything else stays denied.
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(), interest-cohort=()');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
   // HSTS is only meaningful over TLS (Railway terminates TLS for you).
@@ -90,7 +95,10 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocketServer({
   noServer: true,
-  maxPayload: 16 * 1024, // hard cap; message payloads are far smaller
+  // Text messages stay tiny (2 KB ciphertext); the cap exists so a single file
+  // chunk (64 KB plaintext -> ~87 KB base64) fits in one frame. Nothing larger
+  // is ever accepted, and the server still buffers no file data at all.
+  maxPayload: 128 * 1024,
   // Never log or retain IPs: we only accept the connection, nothing is recorded.
 });
 
