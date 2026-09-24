@@ -1,0 +1,1 @@
+Node.js ≥18 with ES modules (`"type": "module"`), single runtime dependency `ws@^8.18.0`; frontend uses only native Web Crypto API (no bundler, no libraries).

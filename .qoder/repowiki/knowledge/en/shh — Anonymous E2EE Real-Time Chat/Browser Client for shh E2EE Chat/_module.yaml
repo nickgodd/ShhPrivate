@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: frontend
+title: Browser Client for shh E2EE Chat
+scope:
+    - public/
+source_files: []
+depends_on: []
+related_to: []

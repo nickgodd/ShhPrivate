@@ -1,0 +1,2 @@
+- Client-server messaging is a flat set of string-typed event names exchanged as JSON payloads over a single WebSocket connection.
+- All cryptographic material (keys, nonces, ephemeral pairs) lives only in JavaScript memory and is never serialized or sent to the server.

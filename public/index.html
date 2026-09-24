@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="color-scheme" content="dark" />
+  <title>shh — анонимный E2EE чат</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="icon" href="data:," />
+</head>
+<body>
+  <!-- ===== Start screen ===== -->
+  <section id="start" class="screen">
+    <div class="start-box">
+      <h1 class="brand">shh<span class="dot">.</span></h1>
+      <p class="tagline">Анонимный чат со сквозным шифрованием.<br />Ничего не сохраняется.</p>
+      <button id="createBtn" class="primary">Создать сессию</button>
+      <p id="startHint" class="hint" hidden>Решаю задачу для защиты от ботов…</p>
+    </div>
+  </section>
+
+  <!-- ===== App ===== -->
+  <main id="app" class="app" hidden>
+    <!-- Sidebar -->
+    <aside class="side">
+      <header class="side-top">
+        <button id="profileBtn" class="profile" title="Профиль" aria-label="Профиль">
+          <span class="avatar" id="avatarDot"></span>
+        </button>
+        <input id="searchInput" class="search" type="text" inputmode="latin"
+               autocomplete="off" spellcheck="false" placeholder="Поиск по ID…" aria-label="Поиск по идентификатору" />
+        <button id="searchBtn" class="icon-btn" title="Найти" aria-label="Найти">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M21 21l-4.3-4.3M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></svg>
+        </button>
+      </header>
+
+      <div id="profilePanel" class="profile-panel" hidden>
+        <div class="pp-row">
+          <span class="pp-label">Ваш идентификатор</span>
+          <div class="pp-value">
+            <code id="myId" class="masked">••••••••••••</code>
+            <button class="mini" id="toggleId" aria-pressed="false">показать</button>
+            <button class="mini" id="copyId">копировать</button>
+          </div>
+        </div>
+        <div class="pp-row">
+          <span class="pp-label">Публичный ключ</span>
+          <div class="pp-value">
+            <code id="myKey" class="masked small">••••••••••••</code>
+            <button class="mini" id="toggleKey" aria-pressed="false">показать</button>
+          </div>
+        </div>
+        <button id="logoutBtn" class="danger wide">Выйти (новая сессия)</button>
+      </div>
+
+      <nav id="chatList" class="chat-list" aria-label="Список чатов"></nav>
+
+      <div id="requestList" class="request-list" aria-label="Запросы на диалог"></div>
+    </aside>
+
+    <!-- Chat area -->
+    <section class="chat" id="chatArea">
+      <div class="empty" id="emptyState">
+        <p>Выберите чат слева или найдите собеседника по ID.</p>
+      </div>
+
+      <header class="chat-top" id="chatTop" hidden>
+        <div class="chat-title">
+          <span class="peer-name" id="peerName"></span>
+          <button class="fp-chip" id="fpChip" title="Отпечаток ключа — сверьте с собеседником">
+            <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5z"/></svg>
+            <span id="fpShort"></span>
+          </button>
+        </div>
+        <div class="chat-menu-wrap">
+          <button id="chatMenuBtn" class="icon-btn" title="Меню" aria-label="Меню чата">⋯</button>
+          <div id="chatMenu" class="chat-menu" hidden>
+            <div class="fp-detail">
+              <div class="fp-detail-label">Отпечаток ключа (fingerprint)</div>
+              <code id="fpFull"></code>
+              <div class="fp-hint">Сверьте этот код с собеседником на другом устройстве, чтобы исключить подмену (MITM).</div>
+            </div>
+            <button id="endChatBtn" class="danger">Завершить чат</button>
+          </div>
+        </div>
+      </header>
+
+      <div id="messages" class="messages" hidden></div>
+
+      <footer class="composer" id="composer" hidden>
+        <textarea id="msgInput" rows="1" placeholder="Сообщение…" maxlength="2048" aria-label="Текст сообщения"></textarea>
+        <div class="composer-bar">
+          <span id="sizeHint" class="size-hint"></span>
+          <button id="sendBtn" class="primary small">Отправить</button>
+        </div>
+      </footer>
+    </section>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

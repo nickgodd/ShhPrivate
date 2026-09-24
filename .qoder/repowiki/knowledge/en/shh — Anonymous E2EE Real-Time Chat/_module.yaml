@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: ""
+title: shh — Anonymous E2EE Real-Time Chat
+scope:
+    - .gitignore
+    - package.json
+    - package-lock.json
+    - README.md
+source_files: []
+depends_on: []
+related_to: []

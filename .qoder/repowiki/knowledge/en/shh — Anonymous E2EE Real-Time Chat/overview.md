@@ -1,0 +1,1 @@
+Node.js + vanilla-browser anonymous chat where the server relays only ciphertext over WebSocket and all cryptography (X25519/ECDH, HKDF, AES-256-GCM) runs in-memory on both sides.

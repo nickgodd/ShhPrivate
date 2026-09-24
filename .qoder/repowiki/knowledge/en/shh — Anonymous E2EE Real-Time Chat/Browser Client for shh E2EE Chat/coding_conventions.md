@@ -1,0 +1,5 @@
+- DOM element access goes through a centralized `$` helper that caches every referenced node into an `el` object, so handlers never call `getElementById` directly.
+- All cryptography is isolated in `crypto.js` and exposed as named async/sync exports; `app.js` never calls `crypto.subtle` directly.
+- Secret material (identity private keys, ephemeral private keys, chat keys) is kept only in JavaScript memory variables and never written to disk, cookies, or IndexedDB.
+- User-visible strings are localized to Russian and stored inline in the code rather than loaded from a dictionary file.
+- UI state changes are driven by toggling `hidden` attributes and CSS classes (e.g. `.online`, `.over`, `.active`) rather than direct style mutations.

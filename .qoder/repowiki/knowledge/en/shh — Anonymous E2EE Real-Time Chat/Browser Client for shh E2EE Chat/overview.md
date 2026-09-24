@@ -1,0 +1,1 @@
+Vanilla browser client that implements the end-to-end encrypted chat UI, WebSocket protocol, proof-of-work authentication, and per-chat AES-GCM encryption.

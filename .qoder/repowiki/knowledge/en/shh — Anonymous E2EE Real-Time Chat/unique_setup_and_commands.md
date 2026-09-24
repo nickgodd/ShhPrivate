@@ -1,0 +1,1 @@
+`npm install` then `npm start` (or `npm run dev` for `node --watch`) boots the server on port 3000 by default; open two tabs at `http://localhost:3000` to simulate two peers.

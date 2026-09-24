@@ -1,0 +1,29 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: Q0DeR-MaG1C-BrAnCh-Fo2-NoN-GiT-Or-No-C0MmIt
+nodes_managed: true
+exported_at: "2026-09-24T18:15:31Z"
+modules:
+    "":
+        dir_name: shh — Anonymous E2EE Real-Time Chat
+        title: shh — Anonymous E2EE Real-Time Chat
+        scope:
+            - .gitignore
+            - package.json
+            - package-lock.json
+            - README.md
+        source_files: []
+        children:
+            - frontend
+        depends_on: []
+        related_to: []
+    frontend:
+        dir_name: Browser Client for shh E2EE Chat
+        title: Browser Client for shh E2EE Chat
+        scope:
+            - public/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

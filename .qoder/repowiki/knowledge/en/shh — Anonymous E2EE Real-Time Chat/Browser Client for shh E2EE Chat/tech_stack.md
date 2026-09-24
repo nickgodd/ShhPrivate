@@ -1,0 +1,1 @@
+Plain HTML + CSS + vanilla JS ES modules; Web Crypto API for X25519/P-256 ECDH, HKDF-SHA256, AES-256-GCM; custom in-browser SHA-256 implementation used only for PoW brute-force; WebSocket over ws/wss.

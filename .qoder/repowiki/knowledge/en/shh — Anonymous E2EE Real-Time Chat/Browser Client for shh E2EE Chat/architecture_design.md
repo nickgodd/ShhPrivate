@@ -1,0 +1,6 @@
+Three static assets served from `public/` form a single-page app with no build step:
+- `index.html` is the sole entry point — it declares two screens (`#start`, `#app`) and loads `app.js` as an ES module.
+- `crypto.js` is a pure-function library exporting identity/ephemeral key generation, curve negotiation (X25519 preferred, P-256 fallback), HKDF-based chat-key derivation, AES-256-GCM message AEAD, SHA-256 fingerprinting, and a synchronous in-browser SHA-256 used to solve server PoW challenges. It never touches the DOM or network.
+- `app.js` owns all state (`session`, `chats: Map`, `pendingOut`, `incoming`, `notifByPeer`, `activeChat`) and drives the UI. It imports only from `crypto.js`, opens one `WebSocket` guarded against re-entry, dispatches messages via a `switch` on `m.type` (`pow_challenge`, `session_created`, `search_result`, `contact_request*`, `message`, `chat_ended`, presence, `error`), and renders through imperative DOM manipulation.
+
+Dependency direction is strictly one-way: `app.js → crypto.js`; HTML/CSS are passive. There is no persistence layer — everything lives in RAM and is discarded on tab close, which is enforced by the absence of `localStorage`/`IndexedDB` usage and the explicit comment at the top of `app.js`.
