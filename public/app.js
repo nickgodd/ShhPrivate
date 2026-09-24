@@ -10,10 +10,10 @@ import {
 // ---- DOM refs -------------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 const el = {
-  start: $('start'), app: $('app'), createBtn: $('createBtn'), startHint: $('startHint'),
+  start: $('start'), app: $('app'), createBtn: $('createBtn'),
   profileBtn: $('profileBtn'), avatarDot: $('avatarDot'), searchInput: $('searchInput'),
   searchBtn: $('searchBtn'), profilePanel: $('profilePanel'),
-  myId: $('myId'), myKey: $('myKey'), toggleId: $('toggleId'), toggleKey: $('toggleKey'),
+  myId: $('myId'), toggleId: $('toggleId'),
   copyId: $('copyId'), logoutBtn: $('logoutBtn'),
   chatList: $('chatList'), requestList: $('requestList'),
   emptyState: $('emptyState'), chatTop: $('chatTop'), peerName: $('peerName'),
@@ -47,17 +47,19 @@ function toast(text, kind = '', ttl = 3200) {
 }
 
 // A persistent, dismissible notice (used for "found" / "waiting for reply").
-function peerNotice(peerId, text, actionLabel, onAction) {
+// big=true renders the "Собеседник найден" result block with a full-width
+// primary action button; otherwise it is a compact pill with a mini button.
+function peerNotice(peerId, text, actionLabel, onAction, big = false) {
   dismissNotice(peerId);
   const t = document.createElement('div');
-  t.className = 'toast found';
+  t.className = big ? 'toast notice' : 'toast found';
   const span = document.createElement('span');
   span.textContent = text;
-  span.style.marginRight = '10px';
+  if (!big) span.style.marginRight = '10px';
   t.appendChild(span);
   if (actionLabel) {
     const b = document.createElement('button');
-    b.className = 'mini';
+    b.className = big ? 'primary notice-action' : 'mini';
     b.textContent = actionLabel;
     b.onclick = () => onAction && onAction();
     t.appendChild(b);
@@ -100,7 +102,6 @@ function requestPow() {
   if (session) send({ type: 'pow_challenge' }); // resume path re-solves a fresh PoW
   else {
     el.createBtn.disabled = true;
-    el.startHint.hidden = false;
     send({ type: 'pow_challenge' });
   }
 }
@@ -132,7 +133,6 @@ async function onMessage(m) {
     }
     case 'session_created':
       el.createBtn.disabled = false;
-      el.startHint.hidden = true;
       enterApp(m.resumed);
       break;
 
@@ -177,7 +177,6 @@ async function onMessage(m) {
 
 function onError(code) {
   el.createBtn.disabled = false;
-  el.startHint.hidden = true;
   if (code.startsWith('rate_limited')) {
     const which = code.split(':')[1];
     const map = { search: 'Слишком много поисков', contact: 'Слишком много запросов', message: 'Слишком много сообщений', create: 'Слишком часто' };
@@ -199,8 +198,6 @@ function enterApp(resumed) {
   el.avatarDot.classList.add('online');
   el.myId.textContent = session.id;
   el.myId.dataset.real = session.id;
-  el.myKey.textContent = session.identity.publicB64;
-  el.myKey.dataset.real = session.identity.publicB64;
   maskProfile(true);
   renderChatList();
   if (resumed) toast('Сессия восстановлена', '', 2000);
@@ -209,18 +206,12 @@ function enterApp(resumed) {
 function maskProfile(mask) {
   if (mask) {
     el.myId.textContent = '••••••••••••';
-    el.myKey.textContent = '••••••••••••';
     el.toggleId.textContent = 'показать';
     el.toggleId.setAttribute('aria-pressed', 'false');
-    el.toggleKey.textContent = 'показать';
-    el.toggleKey.setAttribute('aria-pressed', 'false');
   } else {
     el.myId.textContent = el.myId.dataset.real;
-    el.myKey.textContent = el.myKey.dataset.real;
     el.toggleId.textContent = 'скрыть';
     el.toggleId.setAttribute('aria-pressed', 'true');
-    el.toggleKey.textContent = 'скрыть';
-    el.toggleKey.setAttribute('aria-pressed', 'true');
   }
 }
 
@@ -231,7 +222,7 @@ function onSearchResult(m) {
     return;
   }
   if (chats.has(m.targetId)) { openChat(m.targetId); return; }
-  peerNotice(m.targetId, `Собеседник найден: ${m.targetId}`, 'Запрос', () => sendRequest(m.targetId));
+  peerNotice(m.targetId, `Собеседник найден: ${m.targetId}`, 'Отправить запрос', () => sendRequest(m.targetId), true);
 }
 
 function sendRequest(targetId) {
@@ -530,27 +521,64 @@ function updateSizeHint() {
 }
 
 // ---- Logout / reset -------------------------------------------------------
+// Hide and empty the chat pane (header, messages, composer) back to the empty
+// state. Used on logout and whenever no chat is selected.
+function clearChatView() {
+  el.messages.innerHTML = '';
+  el.chatTop.hidden = true;
+  el.messages.hidden = true;
+  el.composer.hidden = true;
+  el.chatMenu.hidden = true;
+  el.emptyState.hidden = false;
+  el.peerName.textContent = '';
+  el.fpShort.textContent = '';
+  el.fpFull.textContent = '';
+  el.msgInput.value = '';
+}
+
+// Full client reset used by "Выйти". Clears every piece of state and DOM and
+// closes the WebSocket (so the server drops the session + its chats), so a
+// brand-new session always starts from a clean screen without a page reload.
 function resetAll() {
   intentionalClose = true;
   clearTimeout(reconnectTimer);
-  if (ws) { try { ws.close(); } catch { /* noop */ } }
+  reconnectTimer = null;
+
+  if (ws) {
+    // Detach handlers first: a late 'close' from the old socket must never touch
+    // the session we are about to create.
+    try { ws.onopen = ws.onmessage = ws.onclose = ws.onerror = null; } catch { /* noop */ }
+    try { ws.close(); } catch { /* noop */ }
+  }
   ws = null;
+
   session = null;
   lastPow = { challenge: null, nonce: null };
+  activeChat = null;
   chats.clear();
   pendingOut.clear();
   incoming.clear();
+
+  // Clear every transient UI element: chat list, open chat, messages, contact
+  // requests, the search field and its results, and all toasts/notices.
   notifByPeer.forEach((t) => t.remove());
   notifByPeer.clear();
-  activeChat = null;
-  intentionalClose = false;
+  el.toasts.innerHTML = '';
+  el.searchInput.value = '';
+  clearChatView();
+  renderChatList();
+  renderRequests();
+
+  delete el.myId.dataset.real;
+  el.myId.textContent = '••••••••••••';
+  el.avatarDot.classList.remove('online');
+  el.profilePanel.hidden = true;
 
   el.app.hidden = true;
-  el.start.hidden = false;
   el.app.dataset.pane = '';
-  delete el.myId.dataset.real;
-  delete el.myKey.dataset.real;
-  renderRequests();
+  el.start.hidden = false;
+  el.createBtn.disabled = false;
+  intentionalClose = false;
 }
 
 // ---- Wire up events -------------------------------------------------------
@@ -559,18 +587,12 @@ let cryptoOk = true;
 function init() {
   detectCurve().then((curve) => {
     cryptoOk = !!curve;
-    if (!curve) {
-      el.createBtn.disabled = true;
-      el.startHint.hidden = false;
-      el.startHint.textContent = 'Браузер не поддерживает ECDH в Web Crypto (X25519/P-256). Обновите браузер.';
-    }
+    if (!curve) el.createBtn.disabled = true;
   });
 
   el.createBtn.onclick = () => {
     if (!cryptoOk) { toast('Браузер не поддерживает необходимую криптографию', 'err'); return; }
     el.createBtn.disabled = true;
-    el.startHint.hidden = false;
-    el.startHint.textContent = 'Подключение и решение задачи…';
     connect();
   };
 
@@ -580,12 +602,6 @@ function init() {
     el.myId.textContent = show ? el.myId.dataset.real : '••••••••••••';
     el.toggleId.textContent = show ? 'скрыть' : 'показать';
     el.toggleId.setAttribute('aria-pressed', String(show));
-  };
-  el.toggleKey.onclick = () => {
-    const show = el.toggleKey.textContent === 'показать';
-    el.myKey.textContent = show ? el.myKey.dataset.real : '••••••••••••';
-    el.toggleKey.textContent = show ? 'скрыть' : 'показать';
-    el.toggleKey.setAttribute('aria-pressed', String(show));
   };
   el.copyId.onclick = async () => {
     try { await navigator.clipboard.writeText(session.id); toast('Идентификатор скопирован'); }
